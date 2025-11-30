@@ -40,45 +40,36 @@ def nieuw_factuur_form(request: Request):
 def maak_factuur(
     request: Request,
     klantnaam: str = Form(...),
-    omschrijving: str = Form(...),
-    uren: float = Form(...)
+    omschrijving: list[str] = Form(...),
+    uren: list[float] = Form(...)
 ):
     with get_db() as conn:
         cur = conn.cursor()
 
-        # Controleer of klant bestaat
+        # Haal klant op
         cur.execute("SELECT * FROM klanten WHERE klantnaam = ?", (klantnaam,))
-        row = cur.fetchone()
+        klant = cur.fetchone()
 
-        if row:
-            klant = row
-            klant_id = klant["klant_id"]
-        else:
-            # Nieuwe klant aanmaken
-            klant_id = int(datetime.datetime.now().timestamp())
-            cur.execute("""
-                INSERT INTO klanten (klant_id, klantnaam, adres, postcode_plaats, btw_verlegd, btw_nummer, email)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (klant_id, klantnaam, "", "", False, "", ""))
-            conn.commit()
-            cur.execute("SELECT * FROM klanten WHERE klant_id = ?", (klant_id,))
-            klant = cur.fetchone()
-
-        # Factuurnummer bepalen
+        # Bepaal nieuw factuurnummer
         cur.execute("SELECT factuurnummer FROM facturen ORDER BY factuurnummer DESC LIMIT 1")
         row = cur.fetchone()
         factuurnummer = str(int(row["factuurnummer"]) + 1) if row else "202500042"
         factuurdatum = datetime.datetime.now()
 
-        totaal = uren * uurprijs_default
-        regels = [(factuurnummer, omschrijving, uren, uurprijs_default, totaal, "")]
+        # Bouw factuurregels op
+        regels = []
+        for i in range(len(omschrijving)):
+            totaal = uren[i] * uurprijs_default
+            regels.append((factuurnummer, omschrijving[i], uren[i], uurprijs_default, totaal, ""))
 
-        # Voeg factuurregels toe
+        # Sla factuurregels op
         for r in regels:
             cur.execute("""
-                INSERT INTO factuurregels (factuurnummer, omschrijving, aantal_uren, uurprijs, totaal, weeknummers)
+                INSERT INTO factuurregels 
+                (factuurnummer, omschrijving, aantal_uren, uurprijs, totaal, weeknummers)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, r)
+
         conn.commit()
 
         # Factuurberekening
@@ -88,14 +79,24 @@ def maak_factuur(
         maand = factuurdatum.month
         kwartaal = f"Q{((maand-1)//3)+1}"
 
-        # Voeg factuur toe
+        # Factuur opslaan
         cur.execute("""
-            INSERT INTO facturen (factuurnummer, klant_id, factuurdatum, totaal_excl, btw_bedrag, totaal_incl, isBetaald, kwartaal)
+            INSERT INTO facturen 
+            (factuurnummer, klant_id, factuurdatum, totaal_excl, btw_bedrag, totaal_incl, isBetaald, kwartaal)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (factuurnummer, klant_id, factuurdatum.isoformat(), totaal_excl, btw_bedrag, totaal_incl, False, kwartaal))
+        """, (
+            factuurnummer,
+            klant["klant_id"],
+            factuurdatum.isoformat(),
+            totaal_excl,
+            btw_bedrag,
+            totaal_incl,
+            False,
+            kwartaal
+        ))
         conn.commit()
 
-    # Genereer PDF
+    # PDF
     pdf_path = genereer_pdf(
         factuur={
             "factuurnummer": factuurnummer,
@@ -105,12 +106,14 @@ def maak_factuur(
             "totaal_incl": totaal_incl
         },
         klant=klant,
-        regels=[{
-            "omschrijving": r[1],
-            "aantal_uren": r[2],
-            "uurprijs": r[3],
-            "totaal": r[4]
-        } for r in regels]
+        regels=[
+            {
+                "omschrijving": r[1],
+                "aantal_uren": r[2],
+                "uurprijs": r[3],
+                "totaal": r[4]
+            } for r in regels
+        ]
     )
 
     klant_dict = dict(klant)
