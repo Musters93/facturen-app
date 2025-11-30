@@ -54,7 +54,7 @@ def maak_factuur(
         cur.execute("SELECT factuurnummer FROM facturen ORDER BY factuurnummer DESC LIMIT 1")
         row = cur.fetchone()
         factuurnummer = str(int(row["factuurnummer"]) + 1) if row else "202500042"
-        factuurdatum = datetime.datetime.now()
+        factuurdatum = datetime.datetime.now().date()
 
         # Bouw factuurregels op
         regels = []
@@ -66,7 +66,7 @@ def maak_factuur(
         for r in regels:
             cur.execute("""
                 INSERT INTO factuurregels 
-                (factuurnummer, omschrijving, aantal_uren, uurprijs, totaal, weeknummers)
+                (factuur_id, omschrijving, aantal_uren, uurprijs, totaal, weeknummers)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, r)
 
@@ -82,17 +82,19 @@ def maak_factuur(
         # Factuur opslaan
         cur.execute("""
             INSERT INTO facturen 
-            (factuurnummer, klant_id, factuurdatum, totaal_excl, btw_bedrag, totaal_incl, isBetaald, kwartaal)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (factuurnummer, klantnaam, klantId, factuurdatum, totaal_excl, btw, totaal_incl, isBetaald, kwartaal, mailSent)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
         """, (
             factuurnummer,
+            klant["klantnaam"],
             klant["klant_id"],
             factuurdatum.isoformat(),
             totaal_excl,
             btw_bedrag,
             totaal_incl,
             False,
-            kwartaal
+            kwartaal,
+            False
         ))
         conn.commit()
 
@@ -144,6 +146,17 @@ def verzend_mail(
 
     result = send_email(factuurnummer, pdf_path, ontvangers_lijst, email_body)
     print("STATUS:", result["status"], "ERROR:", result.get("message", ""))
+
+    # Update factuur in database als mail succesvol
+    if result["status"] == "success":
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE facturen
+                SET mailSent = 1
+                WHERE factuurnummer = ?
+            """, (factuurnummer,))
+            conn.commit()
 
     return templates.TemplateResponse("facturen/sendmail.html", {
         "request": request,

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request, Body, Form
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from database import get_db
 from services.pdf_generator_service import genereer_pdf
@@ -50,8 +51,8 @@ def admin(
 
             if jaar:
                 conditions_klanten.append("""
-                    klant_id IN (
-                        SELECT klant_id FROM facturen
+                    klantId IN (
+                        SELECT klantId FROM facturen
                         WHERE strftime('%Y', factuurdatum) = ?
                     )
                 """)
@@ -69,7 +70,7 @@ def admin(
         query_facturen = """
             SELECT f.*, k.klantnaam, k.btw_verlegd
             FROM facturen f
-            JOIN klanten k ON f.klant_id = k.klant_id
+            JOIN klanten k ON f.klantId = k.klant_id
             WHERE 1=1
         """
         conditions_facturen = []
@@ -94,7 +95,7 @@ def admin(
             cur.execute("""
                 SELECT f.*, k.klantnaam, k.btw_verlegd
                 FROM facturen f
-                JOIN klanten k ON f.klant_id = k.klant_id
+                JOIN klanten k ON f.klantId = k.klant_id
                 ORDER BY f.factuurdatum DESC
             """)
             facturen = cur.fetchall()
@@ -130,10 +131,10 @@ def admin(
         totalen_query = """
             SELECT f.kwartaal, 
                    SUM(CASE WHEN k.btw_verlegd=0 THEN f.totaal_excl ELSE 0 END) AS binnenland,
-                   SUM(CASE WHEN k.btw_verlegd=0 THEN f.btw_bedrag ELSE 0 END) AS btw,
+                   SUM(CASE WHEN k.btw_verlegd=0 THEN f.btw ELSE 0 END) AS btw,
                    SUM(CASE WHEN k.btw_verlegd=1 THEN f.totaal_excl ELSE 0 END) AS buitenland
             FROM facturen f
-            JOIN klanten k ON f.klant_id = k.klant_id
+            JOIN klanten k ON f.klantId = k.klant_id
             WHERE 1=1
         """
         total_params = []
@@ -306,10 +307,9 @@ def maak_klant_admin(
 ):
     with get_db() as conn:
         cur = conn.cursor()
-        klant_id = int(datetime.datetime.now().timestamp())
         cur.execute("""
-            INSERT INTO klanten (klant_id, klantnaam, adres, postcode_plaats, btw_verlegd, btw_nummer, email)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (klant_id, new_klantnaam, adres, postcode_plaats, bool(btw_verlegd), btw_nummer, email))
+            INSERT INTO klanten (klantnaam, adres, postcode_plaats, btw_verlegd, btw_nummer, email)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (new_klantnaam, adres, postcode_plaats, bool(btw_verlegd), btw_nummer, email))
         conn.commit()
-    return RedirectResponse(url="/admin/klanten", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
