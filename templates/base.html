@@ -6,8 +6,14 @@
     <style>
         body { font-family: Arial, sans-serif; margin:0; background-color:#f7f7f7; color:#333; }
         nav { background-color:#3498db; padding:10px 20px; color:white; display:flex; align-items:center; }
-        nav a { color:white; text-decoration:none; margin-right:20px; font-weight:bold; }
-        nav a:hover { text-decoration:underline; }
+        nav ul { list-style: none; margin:0; padding:0; display:flex; }
+        nav li { position: relative; margin-right:20px; }
+        nav a { color:white; text-decoration:none; padding:8px 12px; display:block; font-weight:bold; }
+        nav a:hover { background-color:#2980b9; border-radius:4px; }
+        nav li ul { display:none; position:absolute; top:35px; left:0; background-color:#3498db; padding:5px 0; border-radius:4px; min-width:180px; }
+        nav li:hover ul { display:block; }
+        nav li ul li { margin:0; }
+        nav li ul li a { padding:8px 12px; }
         main { margin:30px; }
         h1, h2 { color:#2c3e50; }
         form { background-color:#fff; padding:25px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); max-width:800px; margin-bottom:30px; }
@@ -23,10 +29,28 @@
 </head>
 <body>
     <nav>
-        <a href="/">Home</a>
-        <a href="/admin">Admin Overzicht</a>
-        <a href="/admin/query">SQL Console</a>
-        <a href="/result">Resultaten</a>
+        <ul>
+            <li><a href="/">Home</a></li>
+
+            <!-- Admin dropdown -->
+            <li>
+                <a href="/admin">Admin</a>
+                <ul>
+                    <li><a href="/admin">Admin Overzicht</a></li>
+                    <li><a href="/admin/query">SQL Console</a></li>
+                    <li><a href="/admin/klanten/nieuw">Nieuwe Klant Aanmaken</a></li>
+                </ul>
+            </li>
+
+            <!-- Facturen dropdown -->
+            <li>
+                <a href="/facturen/nieuw">Facturen</a>
+                <ul>
+                    <li><a href="/facturen/nieuw">Nieuwe Factuur</a></li>
+                </ul>
+            </li>
+
+        </ul>
     </nav>
 
     <main>

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Nieuwe Factuur Aanmaken{% endblock %}
+
+{% block content %}
+
+<h1>Nieuwe Factuur Aanmaken</h1>
+
+<form action="/facturen/nieuw" method="post"
+      style="background:#fff; padding:25px; border-radius:8px;
+             box-shadow:0 2px 5px rgba(0,0,0,0.1); max-width:600px;">
+
+    <label for="klantnaam" style="font-weight:bold; margin-top:10px;">Klant:</label>
+    <select name="klantnaam" id="klantnaam" required
+        style="width:100%; padding:10px; margin-top:5px; border-radius:4px;
+               border:1px solid #ccc; box-sizing:border-box;">
+        {% for klant in klanten %}
+            <option value="{{ klant }}">{{ klant }}</option>
+        {% endfor %}
+    </select>
+
+    <small style="display:block; margin-top:5px; color:#888;">
+        Of 
+        <a href="/admin/klanten/nieuw" style="color:#3498db; font-weight:bold;">
+            voeg een nieuwe klant toe
+        </a>
+    </small>
+
+    <label for="omschrijving" style="font-weight:bold; margin-top:15px;">Omschrijving:</label>
+    <textarea name="omschrijving" id="omschrijving" rows="2"
+              style="width:100%; padding:10px; border-radius:4px;
+                     border:1px solid #ccc; box-sizing:border-box;">Advisering teelt</textarea>
+
+    <label for="uren" style="font-weight:bold; margin-top:15px;">Aantal uren:</label>
+    <input type="number" step="0.01" name="uren" id="uren" required
+           style="width:100%; padding:10px; border-radius:4px;
+                  border:1px solid #ccc; box-sizing:border-box;">
+
+    <button type="submit"
+            style="margin-top:25px; padding:12px 20px; background-color:#3498db;
+                   color:white; border:none; border-radius:4px; cursor:pointer; font-size:16px;">
+        Factuur Aanmaken
+    </button>
+</form>
+
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Nieuwe Klant Aanmaken{% endblock %}
+
+{% block content %}
+
+<h1>Nieuwe Klant Aanmaken</h1>
+
+<form action="/admin/klanten/nieuw" method="post"
+      style="background:#fff; padding:25px; border-radius:8px;
+             box-shadow:0 2px 5px rgba(0,0,0,0.1); max-width:600px;">
+
+    <label for="new_klantnaam" style="font-weight:bold; margin-top:10px;">Klantnaam:</label>
+    <input type="text" name="new_klantnaam" id="new_klantnaam" required
+           style="width:100%; padding:10px; border-radius:4px; border:1px solid #ccc;">
+
+    <label for="adres" style="font-weight:bold; margin-top:15px;">Adres:</label>
+    <input type="text" name="adres" id="adres" required
+           style="width:100%; padding:10px; border-radius:4px; border:1px solid #ccc;">
+
+    <label for="postcode_plaats" style="font-weight:bold; margin-top:15px;">Postcode en Plaats:</label>
+    <input type="text" name="postcode_plaats" id="postcode_plaats" required
+           style="width:100%; padding:10px; border-radius:4px; border:1px solid #ccc;">
+
+    <label for="btw_verlegd" style="font-weight:bold; margin-top:15px;">BTW Verlegd?</label>
+    <select name="btw_verlegd" id="btw_verlegd" required
+            style="width:100%; padding:10px; margin-top:5px; border-radius:4px; border:1px solid #ccc;">
+        <option value="0">Nee</option>
+        <option value="1">Ja</option>
+    </select>
+
+    <label for="btw_nummer" style="font-weight:bold; margin-top:15px;">BTW Nummer:</label>
+    <input type="text" name="btw_nummer" id="btw_nummer"
+           style="width:100%; padding:10px; border-radius:4px; border:1px solid:#ccc;">
+
+    <label for="email" style="font-weight:bold; margin-top:15px;">E-mail:</label>
+    <input type="email" name="email" id="email" required
+           style="width:100%; padding:10px; border-radius:4px; border:1px solid:#ccc;">
+
+    <button type="submit"
+            style="margin-top:25px; padding:12px 20px; background-color:#3498db;
+                   color:white; border:none; border-radius:4px; cursor:pointer; font-size:16px;">
+        Nieuwe Klant Opslaan
+    </button>
+</form>
+
+{% endblock %}
