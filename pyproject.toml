@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "facturen-project"
+version = "0.1.0"
+description = "Facturatie en PDF generatie met SQLite"
+authors = ["koenmusters@hotmail.com"]
+# Zet package-mode uit zodat Poetry je scriptfolder niet als package probeert te installeren
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.9"
+reportlab = "*"
+sqlite-utils = "*"
+rich = "*"
+fastapi = "^0.121.2"
+uvicorn = "^0.38.0"
+jinja2 = "^3.1.6"
+python-multipart = "^0.0.20"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Overzicht{% endblock %}
+
+{% block content %}
+<h1>Admin Overzicht</h1>
+
+<style>
+    .admin-box {
+        background: #fff;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }
+    th {
+        background: #3498db;
+        color: white;
+    }
+    td[contenteditable="true"] {
+        background: #f7fbff;
+        border-radius: 4px;
+        cursor: text;
+    }
+    td.saving {
+        background: #fff1a8 !important;
+    }
+    td.saved {
+        background: #d4f4dd !important;
+    }
+    td.error {
+        background: #ffdddd !important;
+    }
+</style>
+
+<!-- FILTER BOX -->
+<div class="admin-box">
+    <h2>Database bekijken</h2>
+
+    <form method="get" action="/admin">
+        <label><strong>Kies tabel:</strong></label>
+        <select name="table" onchange="this.form.submit()">
+            <option value="klanten" {% if selected_table == 'klanten' %}selected{% endif %}>Klanten</option>
+            <option value="facturen" {% if selected_table == 'facturen' %}selected{% endif %}>Facturen</option>
+            <option value="factuurregels" {% if selected_table == 'factuurregels' %}selected{% endif %}>Factuurregels</option>
+        </select>
+
+        <label><strong>Jaar:</strong></label>
+        <select name="jaar" onchange="this.form.submit()">
+            <option value="">-- alle jaren --</option>
+            {% for y in jaren %}
+                <option value="{{ y }}" {% if y == selected_jaar %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="text" name="search" placeholder="Zoeken..." value="{{ search_query }}">
+        <button type="submit">Filter</button>
+    </form>
+</div>
+
+<!-- RESULTAAT TABEL -->
+<div class="admin-box">
+
+{% if selected_table == "klanten" %}
+<h2>Klanten</h2>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Klantnaam</th>
+        <th>Adres</th>
+        <th>Postcode/Plaats</th>
+        <th>Email</th>
+        <th>BTW Verlegd</th>
+        <th>BTW Nummer</th>
+    </tr>
+
+    {% for k in klanten %}
+    <tr>
+        <td>{{ k.klant_id }}</td>
+
+        <td contenteditable="true" 
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','klantnaam', this)">
+            {{ k.klantnaam }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','adres', this)">
+            {{ k.adres }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','postcode_plaats', this)">
+            {{ k.postcode_plaats }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','email', this)">
+            {{ k.email }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','btw_verlegd', this)">
+            {{ k.btw_verlegd }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('klanten','klant_id','{{ k.klant_id }}','btw_nummer', this)">
+            {{ k.btw_nummer }}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% elif selected_table == "facturen" %}
+<h2>Facturen</h2>
+
+<table>
+    <tr>
+        <th>Factuurnummer</th>
+        <th>Klant</th>
+        <th>Datum</th>
+        <th>Totaal excl.</th>
+        <th>BTW</th>
+        <th>Totaal incl.</th>
+        <th>PDF</th>
+    </tr>
+
+    {% for f in facturen %}
+    <tr>
+        <td>{{ f.factuurnummer }}</td>
+        <td>{{ f.klantnaam }}</td>
+
+        <td contenteditable="true"
+            onblur="saveCell('facturen','factuurnummer','{{ f.factuurnummer }}','factuurdatum', this)">
+            {{ f.factuurdatum }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('facturen','factuurnummer','{{ f.factuurnummer }}','totaal_excl', this)">
+            {{ "%.2f"|format(f.totaal_excl) }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('facturen','factuurnummer','{{ f.factuurnummer }}','btw_bedrag', this)">
+            {{ "%.2f"|format(f.btw_bedrag) }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('facturen','factuurnummer','{{ f.factuurnummer }}','totaal_incl', this)">
+            {{ "%.2f"|format(f.totaal_incl) }}
+        </td>
+
+        <td>
+            <a class="regen-btn" href="/regen_pdf/{{ f.factuurnummer }}" target="_blank">
+                Regenerate PDF
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% elif selected_table == "factuurregels" %}
+<h2>Factuurregels</h2>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Factuurnummer</th>
+        <th>Omschrijving</th>
+        <th>Uren</th>
+        <th>Uurtarief</th>
+        <th>Totaal regel</th>
+    </tr>
+
+    {% for r in factuurregels %}
+    <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.factuurnummer }}</td>
+
+        <td contenteditable="true"
+            onblur="saveCell('factuurregels','id','{{ r.id }}','omschrijving', this)">
+            {{ r.omschrijving }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('factuurregels','id','{{ r.id }}','aantal_uren', this)">
+            {{ r.aantal_uren }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('factuurregels','id','{{ r.id }}','uurprijs', this)">
+            {{ "%.2f"|format(r.uurprijs) }}
+        </td>
+
+        <td contenteditable="true"
+            onblur="saveCell('factuurregels','id','{{ r.id }}','totaal', this)">
+            {{ "%.2f"|format(r.totaal) }}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endif %}
+</div>
+
+
+<!-- KWARTAAL TOTALEN -->
+<div class="admin-box">
+    <h2>Totalen per kwartaal</h2>
+
+    <table>
+        <tr>
+            <th>Kwartaal</th>
+            <th>Prestaties binnenland (€)</th>
+            <th>Omzetbelasting (€)</th>
+            <th>Prestaties buitenland (€)</th>
+        </tr>
+
+        {% for q in ["Q1","Q2","Q3","Q4"] %}
+        <tr>
+            <td>{{ q }} {% if selected_jaar %}{{ selected_jaar }}{% endif %}</td>
+            <td>€ {{ "%.2f"|format(totalen[q].binnenland if q in totalen else 0) }}</td>
+            <td>€ {{ "%.2f"|format(totalen[q].btw if q in totalen else 0) }}</td>
+            <td>€ {{ "%.2f"|format(totalen[q].buitenland if q in totalen else 0) }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+
+<!-- INLINE EDITING SCRIPT -->
+<script>
+async function saveCell(table, pk, id, field, tdElement) {
+    const newValue = tdElement.innerText.trim();
+
+    tdElement.classList.add("saving");
+
+    const r = await fetch("/admin/update_cell", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ table, pk, id, field, value: newValue })
+    });
+
+    const data = await r.json();
+
+    tdElement.classList.remove("saving");
+
+    if (data.success) {
+        tdElement.classList.add("saved");
+        setTimeout(() => tdElement.classList.remove("saved"), 800);
+    } else {
+        tdElement.classList.add("error");
+        alert("Fout bij opslaan: " + data.error);
+        setTimeout(() => tdElement.classList.remove("error"), 1500);
+    }
+}
+</script>
+
+{% endblock %}

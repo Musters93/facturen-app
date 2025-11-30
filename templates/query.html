@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Console{% endblock %}
+
+{% block content %}
+<h1>SQL Query Console</h1>
+
+<style>
+    .query-box {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    textarea {
+        width: 100%;
+        height: 140px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 14px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    th, td {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+    }
+    th {
+        background: #3498db;
+        color: white;
+    }
+    .error {
+        padding: 12px;
+        background: #ffe0e0;
+        border: 1px solid #ff9999;
+        color: #b30000;
+        border-radius: 6px;
+        margin-top: 15px;
+    }
+</style>
+
+<div class="query-box">
+    <h2>SQL uitvoeren</h2>
+
+    <form method="GET" action="/admin/query">
+        <label><strong>Kies tabel:</strong></label><br>
+        <select name="table" onchange="document.getElementById('sql').value = 'SELECT * FROM ' + this.value + ' LIMIT 50';">
+            <option value="">-- kies tabel --</option>
+            {% for t in tables %}
+                <option value="{{ t }}" {% if selected_table == t %}selected{% endif %}>
+                    {{ t }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+
+        <textarea id="sql" name="q">{{ query }}</textarea>
+
+        <br><br>
+
+        <button type="submit">Uitvoeren</button>
+    </form>
+
+    {% if error %}
+        <div class="error"><strong>Fout:</strong> {{ error }}</div>
+    {% endif %}
+</div>
+
+{% if results %}
+<div class="query-box">
+    <h2>Resultaten</h2>
+
+    <table>
+        <tr>
+            {% for c in columns %}
+                <th>{{ c }}</th>
+            {% endfor %}
+        </tr>
+
+        {% for row in results %}
+        <tr>
+            {% for c in columns %}
+                <td>{{ row[c] }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}
