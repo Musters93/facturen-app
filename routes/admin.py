@@ -178,16 +178,25 @@ def regen_pdf(factuurnummer: str, request: Request):
         if not factuur:
             return {"error": "Factuur niet gevonden"}
 
-        cur.execute("SELECT * FROM klanten WHERE klant_id = ?", (factuur["klant_id"],))
+        cur.execute("SELECT * FROM klanten WHERE klant_id = ?", (factuur["klantId"],))
         klant = cur.fetchone()
 
-        cur.execute("SELECT * FROM factuurregels WHERE factuurnummer = ?", (factuurnummer,))
+        # factuurregels zijn opgeslagen met factuurnummer in kolom factuur_id
+        cur.execute("SELECT * FROM factuurregels WHERE factuur_id = ?", (factuurnummer,))
         regels_db = cur.fetchall()
+
+    factuur_data = {
+        "factuurnummer": factuur["factuurnummer"],
+        "factuurdatum": factuur["factuurdatum"],
+        "totaal_excl": factuur["totaal_excl"],
+        "btw_bedrag": factuur["btw"],
+        "totaal_incl": factuur["totaal_incl"],
+    }
 
     regels = [{"omschrijving": r["omschrijving"], "aantal_uren": r["aantal_uren"],
                "uurprijs": r["uurprijs"], "totaal": r["totaal"]} for r in regels_db]
 
-    pdf_path = genereer_pdf(factuur=factuur, klant=klant, regels=regels, suffix="_regenerated")
+    pdf_path = genereer_pdf(factuur=factuur_data, klant=klant, regels=regels, suffix="_regenerated")
     email_data = prepare_email_data(factuurnummer, dict(klant))
 
     return templates.TemplateResponse("facturen/sendmail.html", {

@@ -53,7 +53,7 @@ def maak_factuur(
         # Bepaal nieuw factuurnummer
         cur.execute("SELECT factuurnummer FROM facturen ORDER BY factuurnummer DESC LIMIT 1")
         row = cur.fetchone()
-        factuurnummer = str(int(row["factuurnummer"]) + 1) if row else "202500042"
+        factuurnummer = str(int(row["factuurnummer"]) + 1) if row else "202500044"
         factuurdatum = datetime.datetime.now().date()
 
         # Bouw factuurregels op

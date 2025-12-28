@@ -4,10 +4,6 @@ import smtplib
 from email.message import EmailMessage
 
 bedrijf_naam = "Piet Damen Teeltadvies en -verkoop"
-banktekst = (
-    "Graag binnen 14 dagen de betaling voldoen op rekening NL49RABO0156625946 "
-    "t.n.v. P.J.M. Damen onder vermelding van het factuurnummer."
-)
 
 def prepare_email_data(factuurnummer: str, klant: dict) -> dict:
     """
@@ -18,9 +14,11 @@ def prepare_email_data(factuurnummer: str, klant: dict) -> dict:
     email_lijst = [e.strip() for e in emails_raw.split(";") if "@" in e] if emails_raw else []
     email_body = f"""Beste {klant['klantnaam']},
 
-In de bijlage vindt u de factuur {factuurnummer}.
+In de bijlage vindt u mijn factuur {factuurnummer}.
 
-{banktekst}
+Ik verzoek u vriendelijk het bedrag binnen 14 dagen over te maken op rekening NL49RABO0156625946, ten name van P.J.M. Damen onder vermelding van het factuurnummer.
+
+Mocht u nog vragen hebben, dan hoor ik het graag. 
 
 Met vriendelijke groet,
 {bedrijf_naam}
