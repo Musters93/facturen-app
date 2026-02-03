@@ -41,7 +41,12 @@ def genereer_pdf(factuur: dict, klant: dict, regels: list,  suffix: str = "") ->
 
     factuurnummer = factuur["factuurnummer"]
     safe_klantnaam = klant['klantnaam'].replace(" ", "")
-    pdf_path = os.path.join(pdf_dir, f"{factuurnummer}_PietDamen_{safe_klantnaam}{suffix}.pdf")
+    factuurdatum = datetime.datetime.fromisoformat(factuur["factuurdatum"])
+    jaar_dir = str(factuurdatum.year)
+    kwartaal_dir = f"Q{((factuurdatum.month - 1) // 3) + 1}"
+    target_dir = os.path.join(pdf_dir, jaar_dir, kwartaal_dir)
+    os.makedirs(target_dir, exist_ok=True)
+    pdf_path = os.path.join(target_dir, f"{factuurnummer}_PietDamen_{safe_klantnaam}{suffix}.pdf")
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name="BedrijfGroen", fontName="Helvetica-Bold", fontSize=16, textColor=colors.green))
@@ -58,7 +63,6 @@ def genereer_pdf(factuur: dict, klant: dict, regels: list,  suffix: str = "") ->
         story.append(Paragraph(f"<b>BTW verlegd</b><br/>BTW-nummer: {klant['btw_nummer']}", styles["Normal"]))
         story.append(Spacer(1, 12))
     story.append(Paragraph("<b>Factuur</b>", styles["Heading2"]))
-    factuurdatum = datetime.datetime.fromisoformat(factuur["factuurdatum"])
     story.append(Paragraph(f"Factuurnummer: {factuurnummer}<br/>Datum: {factuurdatum.strftime('%d-%m-%Y')}", styles["Normal"]))
     story.append(Spacer(1, 12))
 

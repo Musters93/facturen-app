@@ -5,6 +5,7 @@ from database import get_db
 from services.pdf_generator_service import genereer_pdf
 from services.mail_service import prepare_email_data
 import os
+import glob
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
@@ -110,7 +111,7 @@ def admin(
         if selected_table == "factuurregels":
             if search_query:
                 like = f"%{search_query}%"
-                conditions_regels.append("(omschrijving LIKE ? OR factuurnummer LIKE ?)")
+                conditions_regels.append("(omschrijving LIKE ? OR factuur_id LIKE ?)")
                 params_regels.extend([like, like])
 
             if jaar and factuurnummers_jaar:
@@ -202,10 +203,72 @@ def regen_pdf(factuurnummer: str, request: Request):
     return templates.TemplateResponse("facturen/sendmail.html", {
         "request": request,
         "factuurnummer": factuurnummer,
-        "pdf_bestandsnaam": os.path.basename(pdf_path),
+        "pdf_bestandsnaam": os.path.relpath(pdf_path, "facturen_pdfs"),
         "emails": email_data["emails"],
         "email_body": email_data["email_body"]
     })
+
+# ==========================================
+# DELETE FACTUUR + REGELS
+# ==========================================
+@router.post("/facturen/delete")
+def delete_factuur(
+    request: Request,
+    factuurnummer: str = Form(...),
+    return_to: str = Form("/admin?table=facturen")
+):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM factuurregels WHERE factuur_id = ?", (factuurnummer,))
+        cur.execute("DELETE FROM facturen WHERE factuurnummer = ?", (factuurnummer,))
+        conn.commit()
+
+    # Verwijder bijhorende PDFs (origineel en regenerated varianten)
+    for path in glob.glob(os.path.join("facturen_pdfs", "**", f"{factuurnummer}_*.pdf"), recursive=True):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    return RedirectResponse(url=return_to, status_code=303)
+
+# ==========================================
+# DELETE FACTUURREGEL
+# ==========================================
+@router.post("/factuurregels/delete")
+def delete_factuurregel(
+    request: Request,
+    regel_id: int = Form(...),
+    return_to: str = Form("/admin?table=factuurregels")
+):
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT factuur_id FROM factuurregels WHERE id = ?", (regel_id,))
+        row = cur.fetchone()
+        factuur_id = row["factuur_id"] if row else None
+        cur.execute("DELETE FROM factuurregels WHERE id = ?", (regel_id,))
+
+        if factuur_id:
+            cur.execute("SELECT SUM(totaal) AS totaal_excl FROM factuurregels WHERE factuur_id = ?", (factuur_id,))
+            totaal_excl = cur.fetchone()["totaal_excl"] or 0
+            cur.execute("""
+                SELECT f.klantId, k.btw_verlegd
+                FROM facturen f
+                JOIN klanten k ON f.klantId = k.klant_id
+                WHERE f.factuurnummer = ?
+            """, (factuur_id,))
+            klant_row = cur.fetchone()
+            if klant_row:
+                btw_bedrag = 0 if klant_row["btw_verlegd"] else round(totaal_excl * 0.21, 2)
+                totaal_incl = totaal_excl + btw_bedrag
+                cur.execute("""
+                    UPDATE facturen
+                    SET totaal_excl = ?, btw = ?, totaal_incl = ?
+                    WHERE factuurnummer = ?
+                """, (totaal_excl, btw_bedrag, totaal_incl, factuur_id))
+        conn.commit()
+
+    return RedirectResponse(url=return_to, status_code=303)
 
 # ==========================================
 # INLINE EDITING ENDPOINT

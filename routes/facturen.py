@@ -14,7 +14,7 @@ pdf_dir = "facturen_pdfs"
 os.makedirs(pdf_dir, exist_ok=True)
 
 # Default uurprijs
-uurprijs_default = 50
+uurprijs_default = 52
 
 # ==========================================
 # NIEUWE FACTUUR - FORMULIER
@@ -50,11 +50,24 @@ def maak_factuur(
         cur.execute("SELECT * FROM klanten WHERE klantnaam = ?", (klantnaam,))
         klant = cur.fetchone()
 
-        # Bepaal nieuw factuurnummer
-        cur.execute("SELECT factuurnummer FROM facturen ORDER BY factuurnummer DESC LIMIT 1")
-        row = cur.fetchone()
-        factuurnummer = str(int(row["factuurnummer"]) + 1) if row else "202500044"
+        # Bepaal nieuw factuurnummer (reset per jaar)
         factuurdatum = datetime.datetime.now().date()
+        jaar_prefix = str(factuurdatum.year)
+        cur.execute(
+            """
+            SELECT factuurnummer
+            FROM facturen
+            WHERE factuurnummer LIKE ?
+            ORDER BY factuurnummer DESC
+            LIMIT 1
+            """,
+            (f"{jaar_prefix}%",)
+        )
+        row = cur.fetchone()
+        if row:
+            factuurnummer = str(int(row["factuurnummer"]) + 1)
+        else:
+            factuurnummer = f"{jaar_prefix}00001"
 
         # Bouw factuurregels op
         regels = []
@@ -124,7 +137,7 @@ def maak_factuur(
     return templates.TemplateResponse("facturen/sendmail.html", {
         "request": request,
         "factuurnummer": factuurnummer,
-        "pdf_bestandsnaam": os.path.basename(pdf_path),
+        "pdf_bestandsnaam": os.path.relpath(pdf_path, pdf_dir),
         "emails": email_data["emails"],
         "email_body": email_data["email_body"]
     })
@@ -161,7 +174,7 @@ def verzend_mail(
     return templates.TemplateResponse("facturen/sendmail.html", {
         "request": request,
         "factuurnummer": factuurnummer,
-        "pdf_bestandsnaam": os.path.basename(pdf_path),
+        "pdf_bestandsnaam": pdf_bestandsnaam,
         "emails": ontvangers_lijst,
         "email_body": email_body,
         "status": result["status"],

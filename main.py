@@ -16,7 +16,7 @@ from routes.facturen import router as facturen_router    # jouw admin module
 # ==========================================
 # VARIABELEN
 # ==========================================
-uurprijs_default = 50
+uurprijs_default = 52
 pdf_dir = "facturen_pdfs"
 os.makedirs(pdf_dir, exist_ok=True)
 

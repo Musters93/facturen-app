@@ -41,6 +41,17 @@
     td.error {
         background: #ffdddd !important;
     }
+    .delete-btn {
+        background: #e74c3c;
+        color: #fff;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .delete-btn:hover {
+        background: #c0392b;
+    }
 </style>
 
 <!-- FILTER BOX -->
@@ -135,6 +146,7 @@
         <th>Totaal incl.</th>
         <th>PDF</th>
         <th>Mail verzonden</th>
+        <th>Acties</th>
     </tr>
 
     {% for f in facturen %}
@@ -169,6 +181,13 @@
         </a>
         </td>
         <td>{{ "Ja" if f.mailSent else "Nee" }}</td>
+        <td>
+            <form method="post" action="/admin/facturen/delete" onsubmit="return confirm('Factuur en regels verwijderen?');">
+                <input type="hidden" name="factuurnummer" value="{{ f.factuurnummer }}">
+                <input type="hidden" name="return_to" value="{{ request.url }}">
+                <button type="submit" class="delete-btn">Delete</button>
+            </form>
+        </td>
     </tr>
     {% endfor %}
 </table>
@@ -184,6 +203,7 @@
         <th>Uren</th>
         <th>Uurtarief</th>
         <th>Totaal regel</th>
+        <th>Acties</th>
     </tr>
 
     {% for r in factuurregels %}
@@ -209,6 +229,13 @@
         <td contenteditable="true"
             onblur="saveCell('factuurregels','id','{{ r.id }}','totaal', this)">
             {{ "%.2f"|format(r.totaal) }}
+        </td>
+        <td>
+            <form method="post" action="/admin/factuurregels/delete" onsubmit="return confirm('Regel verwijderen?');">
+                <input type="hidden" name="regel_id" value="{{ r.id }}">
+                <input type="hidden" name="return_to" value="{{ request.url }}">
+                <button type="submit" class="delete-btn">Delete</button>
+            </form>
         </td>
     </tr>
     {% endfor %}
