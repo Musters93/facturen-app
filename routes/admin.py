@@ -52,7 +52,7 @@ def admin(
 
             if jaar:
                 conditions_klanten.append("""
-                    klantId IN (
+                    klant_id IN (
                         SELECT klantId FROM facturen
                         WHERE strftime('%Y', factuurdatum) = ?
                     )
@@ -116,7 +116,7 @@ def admin(
 
             if jaar and factuurnummers_jaar:
                 placeholders = ",".join("?" * len(factuurnummers_jaar))
-                conditions_regels.append(f"factuurnummer IN ({placeholders})")
+                conditions_regels.append(f"factuur_id IN ({placeholders})")
                 params_regels.extend(factuurnummers_jaar)
 
         if conditions_regels:
