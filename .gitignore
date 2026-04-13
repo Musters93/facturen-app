@@ -29,3 +29,6 @@ dist/
 
 # SQLite or other local dev DBs
 *.sqlite3
+
+# transacties
+/transacties

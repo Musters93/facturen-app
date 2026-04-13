@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Betalingen Controleren{% endblock %}
+
+{% block content %}
+<h1>Betalingen Controleren</h1>
+
+<style>
+    .summary-grid {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 28px;
+    }
+    .summary-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 18px 24px;
+        min-width: 140px;
+        text-align: center;
+    }
+    .summary-card .num { font-size: 2rem; font-weight: bold; }
+    .summary-card .lbl { font-size: 0.85rem; color: #666; margin-top: 4px; }
+    .c-match  { color: #27ae60; }
+    .c-afwijk { color: #e67e22; }
+    .c-nieuw  { color: #2980b9; }
+    .c-onbet  { color: #e74c3c; }
+
+    .section {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 20px 24px;
+        margin-bottom: 28px;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.93rem; }
+    th { background: #3498db; color: #fff; padding: 9px 10px; text-align: left; }
+    td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 12px;
+        font-size: 0.82rem;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .badge-match   { background: #d4edda; color: #155724; }
+    .badge-afwijk  { background: #fff3cd; color: #856404; }
+    .badge-nieuw   { background: #cce5ff; color: #004085; }
+    .badge-onbet   { background: #f8d7da; color: #721c24; }
+
+    .csv-info { color: #555; font-size: 0.9rem; margin-bottom: 18px; }
+    .fnr-list { margin: 0; padding: 0; list-style: none; }
+    .fnr-list li { font-family: monospace; }
+    .fnr-list .found { color: #27ae60; }
+    .fnr-list .missing { color: #999; }
+    .afwijking-val { color: #e67e22; font-weight: bold; }
+</style>
+
+{% if error %}
+<div class="section" style="color:#e74c3c;">{{ error }}</div>
+{% else %}
+
+<p class="csv-info">CSV: <strong>{{ csv_name }}</strong></p>
+
+<form method="get" action="/admin/betalingen" style="margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+    <input type="text" name="search" value="{{ search }}"
+           placeholder="Zoek op factuurnummer..."
+           style="padding:8px 12px;border:1px solid #ccc;border-radius:4px;font-size:0.95rem;width:220px;">
+
+    <span style="font-weight:bold;font-size:0.9rem;color:#555;">Jaar:</span>
+    {% for y in available_years %}
+    <label style="display:flex;align-items:center;gap:4px;font-size:0.95rem;cursor:pointer;">
+        <input type="checkbox" name="jaar" value="{{ y }}"
+               {% if y in selected_years %}checked{% endif %}
+               style="width:auto;margin:0;">
+        {{ y }}
+    </label>
+    {% endfor %}
+
+    <span style="font-weight:bold;font-size:0.9rem;color:#555;">Klant (onbetaald):</span>
+    <select name="klant" style="padding:7px 10px;border:1px solid #ccc;border-radius:4px;font-size:0.95rem;">
+        <option value="">— Alle klanten —</option>
+        {% for k in available_klanten %}
+        <option value="{{ k }}" {% if k == selected_klant %}selected{% endif %}>{{ k }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit" style="margin:0;padding:8px 16px;font-size:0.95rem;">Filter</button>
+    {% if search or selected_years or selected_klant %}
+    <a href="/admin/betalingen" style="color:#e74c3c;font-size:0.9rem;">Wis filter</a>
+    {% endif %}
+</form>
+
+<!-- Summary -->
+<div class="summary-grid">
+    <div class="summary-card">
+        <div class="num c-nieuw">{{ n_nieuw_betaald }}</div>
+        <div class="lbl">Zojuist betaald<br>gemarkeerd</div>
+    </div>
+    <div class="summary-card">
+        <div class="num c-match">{{ n_match }}</div>
+        <div class="lbl">Transacties<br>exact gematcht</div>
+    </div>
+    <div class="summary-card">
+        <div class="num c-afwijk">{{ n_afwijking }}</div>
+        <div class="lbl">Bedrag-<br>afwijking</div>
+    </div>
+    <div class="summary-card">
+        <div class="num" style="color:#999;">{{ n_niet_in_db }}</div>
+        <div class="lbl">Niet in DB<br>(pre-app)</div>
+    </div>
+    <div class="summary-card">
+        <div class="num c-onbet">{{ n_onbetaald }}</div>
+        <div class="lbl">DB-facturen<br>nog onbetaald</div>
+    </div>
+</div>
+
+<!-- Transaction results -->
+<div class="section">
+    <h2>Transacties met factuurverwijzing</h2>
+    {% if resultaten %}
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Tegenpartij</th>
+                <th>Bedrag</th>
+                <th>Factuurnummer(s)</th>
+                <th>DB-totaal</th>
+                <th>Afwijking</th>
+                <th>Status</th>
+                <th>Opmerking</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in resultaten %}
+        <tr>
+            <td>{{ r.datum }}</td>
+            <td>{{ r.naam }}</td>
+            <td>€ {{ "%.2f"|format(r.bedrag)|replace(".", ",") }}</td>
+            <td>
+                {% if r.is_range %}
+                <div style="font-size:0.82rem;color:#888;margin-bottom:3px;">REF.: {{ r.range_label }}</div>
+                {% endif %}
+                <ul class="fnr-list">
+                {% for fnr in r.factuurnummers %}
+                    <li class="found">{{ fnr }}</li>
+                {% endfor %}
+                {% for fnr in r.niet_in_db %}
+                    <li class="missing">{{ fnr }} <em>(niet in DB)</em></li>
+                {% endfor %}
+                </ul>
+            </td>
+            <td>
+                {% if r.gevonden %}
+                    € {{ "%.2f"|format(r.som_db)|replace(".", ",") }}
+                {% else %}
+                    &mdash;
+                {% endif %}
+            </td>
+            <td>
+                {% if r.gevonden %}
+                    {% if r.afwijking|abs < 0.02 %}
+                        <span style="color:#27ae60;">0,00</span>
+                    {% else %}
+                        <span class="afwijking-val">{{ "%.2f"|format(r.afwijking)|replace(".", ",") }}</span>
+                    {% endif %}
+                {% else %}
+                    &mdash;
+                {% endif %}
+            </td>
+            <td>
+                {% if r.status == "match" %}
+                    <span class="badge badge-match">&#10003; Match</span>
+                {% elif r.status == "afwijking" %}
+                    <span class="badge badge-afwijk">~ Afwijking</span>
+                {% else %}
+                    <span class="badge badge-nieuw">? Pre-app</span>
+                {% endif %}
+            </td>
+            <td>
+                {% for f in r.gevonden %}
+                    {% if f.comment %}
+                    <span style="font-size:0.82rem;color:#666;">{{ f.comment }}</span><br>
+                    {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#888;">Geen transacties met factuurverwijzing gevonden in de CSV.</p>
+    {% endif %}
+</div>
+
+<!-- Unpaid DB invoices -->
+<div class="section">
+    <h2>DB-facturen nog niet betaald</h2>
+    {% if onbetaald %}
+    <table>
+        <thead>
+            <tr>
+                <th>Factuurnummer</th>
+                <th>Klant</th>
+                <th>Factuurdatum</th>
+                <th>Totaal incl. btw</th>
+                <th>Opmerking</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for f in onbetaald %}
+        <tr>
+            <td><span class="badge badge-onbet">{{ f.factuurnummer }}</span></td>
+            <td>{{ f.klantnaam }}</td>
+            <td>{{ f.factuurdatum }}</td>
+            <td>€ {{ "%.2f"|format(f.totaal_incl)|replace(".", ",") }}</td>
+            <td style="font-size:0.82rem;color:#666;">{{ f.comment or "" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background:#f0f0f0;font-weight:bold;">
+                <td colspan="3" style="text-align:right;">Totaal openstaand{% if selected_klant %} ({{ selected_klant }}){% endif %}:</td>
+                <td>€ {{ "%.2f"|format(totaal_onbetaald)|replace(".", ",") }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p style="color:#27ae60; font-weight:bold;">Alle DB-facturen zijn betaald!</p>
+    {% endif %}
+</div>
+
+{% endif %}
+{% endblock %}
